@@ -1,0 +1,35 @@
+{
+  "name": "nagios-plugin-generator-server",
+  "version": "1.0.0",
+  "description": "Node.js + Express server for generating and managing Nagios plugin scripts.",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "keywords": [
+    "nagios",
+    "plugin",
+    "generator",
+    "express",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "dockerode": "^4.0.9",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "tar-stream": "^3.1.8",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/dockerode": "^4.0.1",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.7.4",
+    "@types/tar-stream": "^3.1.4",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.7.2"
+  }
+}

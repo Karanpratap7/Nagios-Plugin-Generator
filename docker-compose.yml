@@ -1,0 +1,26 @@
+services:
+  plugin-generator:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NAGIOS_CONTAINER_NAME=nagios
+      - NAGIOS_TARGET_DIR=/usr/local/nagios/libexec
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - plugin-generator-data:/app/generated-plugins
+
+  nagios:
+    image: jasonrivers/nagios:latest
+    container_name: nagios
+    ports:
+      - "8080:80"
+    volumes:
+      - plugin-generator-data:/usr/local/nagios/libexec
+
+volumes:
+  plugin-generator-data:
+
