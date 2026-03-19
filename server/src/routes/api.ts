@@ -40,6 +40,9 @@ router.post("/generate", async (req, res) => {
         details: err.flatten()
       });
     }
+    if (err instanceof Error) {
+      return res.status(400).json({ error: err.message });
+    }
     // eslint-disable-next-line no-console
     console.error("Error generating plugin", err);
     return res.status(500).json({ error: "Failed to generate plugin" });

@@ -7,16 +7,21 @@ type GenerateResponse = {
   preview?: string;
 };
 
+type CheckType = "HTTP_API" | "CPU" | "MEMORY" | "DISK";
+
 export const App: React.FC = () => {
   const [form, setForm] = useState({
     name: "",
     description: "",
     author: "",
     version: "",
-    command: "",
+    checkType: "HTTP_API" as CheckType,
+    target: "",
+    advancedMode: false,
+    manualCommand: "",
     warningThreshold: "",
     criticalThreshold: "",
-    outputTemplate: "",
+    timeoutSeconds: "5",
     copyToContainer: false,
     containerName: "",
     targetDir: ""
@@ -37,6 +42,36 @@ export const App: React.FC = () => {
     }));
   };
 
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const generatedCommandPreview = (() => {
+    const target = (form.target || "").trim();
+    if (form.advancedMode && form.manualCommand.trim()) {
+      return form.manualCommand.trim();
+    }
+
+    switch (form.checkType) {
+      case "HTTP_API":
+        return `curl -s -o /dev/null -w "%{http_code} %{time_total}" ${
+          target || "<URL>"
+        }`;
+      case "CPU":
+        return `top -bn1 | grep "Cpu(s)"`;
+      case "MEMORY":
+        return `free -m`;
+      case "DISK":
+        return `df -h ${target || "/"}`;
+      default:
+        return "";
+    }
+  })();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus(null);
@@ -46,9 +81,11 @@ export const App: React.FC = () => {
     try {
       const payload = {
         ...form,
+        target: form.target || null,
+        manualCommand: form.manualCommand || null,
+        timeoutSeconds: Number(form.timeoutSeconds) || 5,
         warningThreshold: form.warningThreshold || null,
         criticalThreshold: form.criticalThreshold || null,
-        outputTemplate: form.outputTemplate || null,
         containerName: form.containerName || null,
         targetDir: form.targetDir || null
       };
@@ -294,18 +331,91 @@ export const App: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-200">
-                    Command to run (embedded in plugin)
-                  </label>
-                  <textarea
-                    name="command"
-                    value={form.command}
-                    onChange={handleChange}
-                    required
-                    placeholder="curl -fsS http://localhost:8080/healthz"
-                    className="min-h-[80px] w-full resize-y rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-xs text-slate-100 outline-none ring-0 transition focus:border-sky-400 focus:ring-2 focus:ring-sky-500/40"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-slate-200">
+                      Check type
+                    </label>
+                    <select
+                      name="checkType"
+                      value={form.checkType}
+                      onChange={handleSelectChange}
+                      className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-xs text-slate-100 outline-none ring-0 transition focus:border-sky-400 focus:ring-2 focus:ring-sky-500/40"
+                    >
+                      <option value="HTTP_API">HTTP / API</option>
+                      <option value="CPU">CPU</option>
+                      <option value="MEMORY">Memory</option>
+                      <option value="DISK">Disk</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-slate-200">
+                      Target
+                    </label>
+                    <input
+                      name="target"
+                      value={form.target}
+                      onChange={handleChange}
+                      placeholder={
+                        form.checkType === "HTTP_API"
+                          ? "https://example.com/healthz"
+                          : form.checkType === "DISK"
+                          ? "/"
+                          : "(auto)"
+                      }
+                      className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-xs text-slate-100 outline-none ring-0 transition focus:border-sky-400 focus:ring-2 focus:ring-sky-500/40"
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-800/70 bg-slate-950/60 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-[11px] font-medium text-slate-200">
+                      Auto Generate Command
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        id="advancedMode"
+                        type="checkbox"
+                        name="advancedMode"
+                        checked={form.advancedMode}
+                        onChange={handleChange}
+                        className="h-3.5 w-3.5 rounded border-slate-600 bg-slate-900 text-sky-400 focus:ring-sky-500"
+                      />
+                      <label
+                        htmlFor="advancedMode"
+                        className="text-[11px] text-slate-300"
+                      >
+                        Advanced Mode
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 text-[11px] text-slate-300">
+                    Generated command (preview):
+                  </div>
+                  <pre className="mt-2 max-h-28 overflow-auto rounded-lg bg-slate-950/80 p-2 text-[11px] text-slate-200">
+                    <code>{generatedCommandPreview}</code>
+                  </pre>
+
+                  {form.advancedMode && (
+                    <div className="mt-3 space-y-1.5">
+                      <label className="text-[11px] font-medium text-slate-200">
+                        Manual command (optional)
+                      </label>
+                      <textarea
+                        name="manualCommand"
+                        value={form.manualCommand}
+                        onChange={handleChange}
+                        placeholder='curl -s -o /dev/null -w "%{http_code} %{time_total}" https://example.com/healthz'
+                        className="min-h-[70px] w-full resize-y rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-xs text-slate-100 outline-none ring-0 transition focus:border-sky-400 focus:ring-2 focus:ring-sky-500/40"
+                      />
+                      <div className="text-[10px] text-slate-400">
+                        Advanced Mode keeps backward compatibility, but the
+                        generator prefers structured inputs.
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -337,13 +447,13 @@ export const App: React.FC = () => {
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-slate-200">
-                    Output message template
+                    Timeout (seconds)
                   </label>
                   <input
-                    name="outputTemplate"
-                    value={form.outputTemplate}
+                    name="timeoutSeconds"
+                    value={form.timeoutSeconds}
                     onChange={handleChange}
-                    placeholder="HTTP check: ${STATUS_TEXT} (${DETAILS})"
+                    placeholder="5"
                     className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-xs text-slate-100 outline-none ring-0 transition focus:border-sky-400 focus:ring-2 focus:ring-sky-500/40"
                   />
                 </div>
